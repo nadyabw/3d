@@ -1,4 +1,3 @@
-using System.Collections;
 using DG.Tweening;
 using UnityEngine;
 
@@ -8,6 +7,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private CharacterController controller;
 
     [Header("Movement")]
+    [SerializeField] private Animator animator;
     [SerializeField] private float moveSpeed;
 
     [Header("Jump")]
@@ -22,6 +22,12 @@ public class PlayerMovement : MonoBehaviour
     [Header("Resetting")]
     [SerializeField] private float toStartDuration;
 
+    [Header("Teleportation")]
+    [SerializeField] private float teleportationTime = 0.75f;
+    [SerializeField] private float teleportationDelay = 0.5f;
+
+    private Transform cameraTransform;
+
     private float gravity;
     private Vector3 startPosition;
     private bool isMoving;
@@ -32,11 +38,21 @@ public class PlayerMovement : MonoBehaviour
         isMoving = true;
     }
 
+    private void OnDisable()
+    {
+        animator.SetBool("IsRunning", false);
+    }
+
+    private void Start()
+    {
+        cameraTransform = Camera.main.transform;
+    }
+
     void Update()
     {
-        if (!isMoving) return;
+        if (Game.Instance.IsPaused || !isMoving) return;
 
-        Rotate();
+        //Rotate();
         Move();
     }
 
@@ -49,9 +65,24 @@ public class PlayerMovement : MonoBehaviour
 
     private void Move()
     {
+        var forward = cameraTransform.forward;
+        forward.y = 0;
+        forward.Normalize();
+        var right = cameraTransform.right;
+        right.y = 0;
+        right.Normalize();
+
         var horizontal = Input.GetAxis("Horizontal");
         var vertical = Input.GetAxis("Vertical");
-        var moveDirection = transform.forward * vertical + transform.right * horizontal;
+
+        var moveDirection = forward * vertical + right * horizontal;
+
+        bool isRunning = IsRunning();
+        if(isRunning)
+        {
+            transform.rotation = Quaternion.LookRotation(moveDirection);
+        }
+        animator.SetBool("IsRunning", isRunning);
 
         if (moveDirection.magnitude > 1f)
         {
@@ -67,6 +98,7 @@ public class PlayerMovement : MonoBehaviour
             if (Input.GetButtonDown("Jump"))
             {
                 gravity = jumpHeight;
+                AudioManager.Instance.PlaySFX(SFXType.Jump, transform);
             }
         }
         else
@@ -77,6 +109,11 @@ public class PlayerMovement : MonoBehaviour
         moveDelta.y = gravity;
 
         controller.Move(moveDelta);
+
+        bool IsRunning()
+        {
+            return (Mathf.Abs(vertical) + Mathf.Abs(horizontal)) > 0;
+        }
     }
 
     public void ResetPosition()
@@ -88,4 +125,12 @@ public class PlayerMovement : MonoBehaviour
                .SetEase(Ease.Flash)
                .OnComplete(() => isMoving = true);
     }
+
+    public void TeleportTo(Vector3 pos)
+    {
+        Sequence sequence = DOTween.Sequence();
+        sequence.AppendInterval(teleportationDelay);
+        sequence.Append(transform.DOMove(pos, teleportationTime).SetEase(Ease.Linear));
+    }
+
 }

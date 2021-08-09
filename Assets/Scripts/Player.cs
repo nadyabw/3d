@@ -1,11 +1,10 @@
-using DG.Tweening;
-using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class Player : MonoBehaviour
 {
     [SerializeField] private GameObject deathVFX;
+    [SerializeField] private Bullet bulletPrefab;
+    [SerializeField] private Transform bulletSpawnPoint;
 
     private PlayerMovement playerMovement;
 
@@ -22,32 +21,37 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetMouseButtonDown(0))
+        {
+            Shoot();
+        }
+
         // for test purpose
-        if(Input.GetKeyDown(KeyCode.X))
+/*        if (Input.GetKeyDown(KeyCode.X))
         {
             PlayDeathVFX();
-        }
+        }*/
     }
 
-    private IEnumerator UpdateRestart()
+    private void Shoot()
     {
-        yield return new WaitForSeconds(3f);
+        AudioManager.Instance.PlaySFX(SFXType.Shoot, transform);
 
-        Restart();
-    }
-
-    private void Restart()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        Instantiate(bulletPrefab, bulletSpawnPoint.position, transform.rotation);
     }
 
     public void HandleDeath()
     {
+        AudioManager.Instance.PlaySFX(SFXType.PlayerDeath, transform);
         PlayDeathVFX();
-
         DisableMovement();
 
-        StartCoroutine(UpdateRestart());
+        LevelManager.Instance.HandlePlayerDeath();
+    }
+
+    public void TeleportTo(Vector3 pos)
+    {
+        playerMovement.TeleportTo(pos);
     }
 
     private void PlayDeathVFX()
