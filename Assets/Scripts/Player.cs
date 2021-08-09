@@ -21,6 +21,9 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
+        if (Game.Instance.IsPaused)
+            return;
+            
         if (Input.GetMouseButtonDown(0))
         {
             Shoot();
